@@ -11,7 +11,7 @@ import { CellData } from 'common/buffer/CellData';
 import { Attributes, UnderlineStyle } from 'common/buffer/Constants';
 import { AttributeData } from 'common/buffer/AttributeData';
 import { Params } from 'common/parser/Params';
-import { MockCoreService, MockBufferService, MockDirtyRowService, MockOptionsService, MockLogService, MockCoreMouseService, MockCharsetService, MockUnicodeService } from 'common/TestUtils.test';
+import { MockCoreService, MockBufferService, MockDirtyRowService, MockOptionsService, MockLogService, MockCoreMouseService, MockCharsetService, MockUnicodeService, MockShellService } from 'common/TestUtils.test';
 import { IBufferService, ICoreService } from 'common/services/Services';
 import { DEFAULT_OPTIONS } from 'common/services/OptionsService';
 import { clone } from 'common/Clone';
@@ -54,7 +54,7 @@ describe('InputHandler', () => {
     bufferService.resize(80, 30);
     coreService = new CoreService(() => {}, bufferService, new MockLogService(), optionsService);
 
-    inputHandler = new TestInputHandler(bufferService, new MockCharsetService(), coreService, new MockDirtyRowService(), new MockLogService(), optionsService, new MockCoreMouseService(), new MockUnicodeService());
+    inputHandler = new TestInputHandler(bufferService, new MockCharsetService(), coreService, new MockDirtyRowService(), new MockLogService(), optionsService, new MockCoreMouseService(), new MockUnicodeService(), new MockShellService());
   });
 
   it('save and restore cursor', () => {
@@ -117,7 +117,7 @@ describe('InputHandler', () => {
   describe('setMode', () => {
     it('should toggle bracketedPasteMode', () => {
       const coreService = new MockCoreService();
-      const inputHandler = new InputHandler(new MockBufferService(80, 30), new MockCharsetService(), coreService, new MockDirtyRowService(), new MockLogService(), new MockOptionsService(), new MockCoreMouseService(), new MockUnicodeService());
+      const inputHandler = new InputHandler(new MockBufferService(80, 30), new MockCharsetService(), coreService, new MockDirtyRowService(), new MockLogService(), new MockOptionsService(), new MockCoreMouseService(), new MockUnicodeService(), new MockShellService());
       // Set bracketed paste mode
       inputHandler.setModePrivate(Params.fromArray([2004]));
       assert.equal(coreService.decPrivateModes.bracketedPasteMode, true);
@@ -135,7 +135,7 @@ describe('InputHandler', () => {
 
     it('insertChars', function(): void {
       const bufferService = new MockBufferService(80, 30);
-      const inputHandler = new InputHandler(bufferService, new MockCharsetService(), new MockCoreService(), new MockDirtyRowService(), new MockLogService(), new MockOptionsService(), new MockCoreMouseService(), new MockUnicodeService());
+      const inputHandler = new InputHandler(bufferService, new MockCharsetService(), new MockCoreService(), new MockDirtyRowService(), new MockLogService(), new MockOptionsService(), new MockCoreMouseService(), new MockUnicodeService(), new MockShellService());
 
       // insert some data in first and second line
       inputHandler.parse(Array(bufferService.cols - 9).join('a'));
@@ -172,7 +172,7 @@ describe('InputHandler', () => {
     });
     it('deleteChars', function(): void {
       const bufferService = new MockBufferService(80, 30);
-      const inputHandler = new InputHandler(bufferService, new MockCharsetService(), new MockCoreService(), new MockDirtyRowService(), new MockLogService(), new MockOptionsService(), new MockCoreMouseService(), new MockUnicodeService());
+      const inputHandler = new InputHandler(bufferService, new MockCharsetService(), new MockCoreService(), new MockDirtyRowService(), new MockLogService(), new MockOptionsService(), new MockCoreMouseService(), new MockUnicodeService(), new MockShellService());
 
       // insert some data in first and second line
       inputHandler.parse(Array(bufferService.cols - 9).join('a'));
@@ -212,7 +212,7 @@ describe('InputHandler', () => {
     });
     it('eraseInLine', function(): void {
       const bufferService = new MockBufferService(80, 30);
-      const inputHandler = new InputHandler(bufferService, new MockCharsetService(), new MockCoreService(), new MockDirtyRowService(), new MockLogService(), new MockOptionsService(), new MockCoreMouseService(), new MockUnicodeService());
+      const inputHandler = new InputHandler(bufferService, new MockCharsetService(), new MockCoreService(), new MockDirtyRowService(), new MockLogService(), new MockOptionsService(), new MockCoreMouseService(), new MockUnicodeService(), new MockShellService());
 
       // fill 6 lines to test 3 different states
       inputHandler.parse(Array(bufferService.cols + 1).join('a'));
@@ -240,7 +240,7 @@ describe('InputHandler', () => {
     });
     it('eraseInDisplay', function(): void {
       const bufferService = new MockBufferService(80, 7);
-      const inputHandler = new InputHandler(bufferService, new MockCharsetService(), new MockCoreService(), new MockDirtyRowService(), new MockLogService(), new MockOptionsService(), new MockCoreMouseService(), new MockUnicodeService());
+      const inputHandler = new InputHandler(bufferService, new MockCharsetService(), new MockCoreService(), new MockDirtyRowService(), new MockLogService(), new MockOptionsService(), new MockCoreMouseService(), new MockUnicodeService(), new MockShellService());
 
       // fill display with a's
       for (let i = 0; i < bufferService.rows; ++i) inputHandler.parse(Array(bufferService.cols + 1).join('a'));
@@ -357,7 +357,7 @@ describe('InputHandler', () => {
   });
   describe('print', () => {
     it('should not cause an infinite loop (regression test)', () => {
-      const inputHandler = new InputHandler(new MockBufferService(80, 30), new MockCharsetService(), new MockCoreService(), new MockDirtyRowService(), new MockLogService(), new MockOptionsService(), new MockCoreMouseService(), new MockUnicodeService());
+      const inputHandler = new InputHandler(new MockBufferService(80, 30), new MockCharsetService(), new MockCoreService(), new MockDirtyRowService(), new MockLogService(), new MockOptionsService(), new MockCoreMouseService(), new MockUnicodeService(), new MockShellService());
       const container = new Uint32Array(10);
       container[0] = 0x200B;
       inputHandler.print(container, 0, 1);
@@ -378,7 +378,7 @@ describe('InputHandler', () => {
 
     beforeEach(() => {
       bufferService = new MockBufferService(80, 30);
-      handler = new InputHandler(bufferService, new MockCharsetService(), new MockCoreService(), new MockDirtyRowService(), new MockLogService(), new MockOptionsService(), new MockCoreMouseService(), new MockUnicodeService());
+      handler = new InputHandler(bufferService, new MockCharsetService(), new MockCoreService(), new MockDirtyRowService(), new MockLogService(), new MockOptionsService(), new MockCoreMouseService(), new MockUnicodeService(), new MockShellService());
     });
     it('should handle DECSET/DECRST 47 (alt screen buffer)', () => {
       handler.parse('\x1b[?47h\r\n\x1b[31mJUNK\x1b[?47lTEST');
@@ -569,7 +569,7 @@ describe('InputHandler', () => {
   describe('colon notation', () => {
     let inputHandler2: TestInputHandler;
     beforeEach(() => {
-      inputHandler2 = new TestInputHandler(bufferService, new MockCharsetService(), coreService, new MockDirtyRowService(), new MockLogService(), optionsService, new MockCoreMouseService(), new MockUnicodeService());
+      inputHandler2 = new TestInputHandler(bufferService, new MockCharsetService(), coreService, new MockDirtyRowService(), new MockLogService(), optionsService, new MockCoreMouseService(), new MockUnicodeService(), new MockShellService());
     });
     describe('should equal to semicolon', () => {
       it('CSI 38:2::50:100:150 m', () => {

@@ -3,7 +3,7 @@
  * @license MIT
  */
 
-import { IBufferService, ICoreService, ILogService, IOptionsService, ITerminalOptions, IPartialTerminalOptions, IDirtyRowService, ICoreMouseService, ICharsetService, IUnicodeService, IUnicodeVersionProvider } from 'common/services/Services';
+import { IBufferService, ICoreService, ILogService, IOptionsService, ITerminalOptions, IPartialTerminalOptions, IDirtyRowService, ICoreMouseService, ICharsetService, IUnicodeService, IUnicodeVersionProvider, IShellService, ShellState, ShellAction } from 'common/services/Services';
 import { IEvent, EventEmitter } from 'common/EventEmitter';
 import { clone } from 'common/Clone';
 import { DEFAULT_OPTIONS } from 'common/services/OptionsService';
@@ -131,4 +131,27 @@ export class MockUnicodeService implements IUnicodeService {
   public getStringCellWidth(s: string): number {
     throw new Error('Method not implemented.');
   }
+}
+
+export class MockShellService implements IShellService {
+  serviceBrand: undefined;
+
+  public state = ShellState.UNKNOWN;
+  public prompt : string | undefined;
+  public pwd : string | undefined;
+
+  precmd(prompt: string): void {
+
+  }
+
+  preexec(): void {
+
+  }
+
+  chpwd(oldpwd: string, pwd: string): void {
+
+  }
+
+  onStateChange: IEvent<{ priorState: ShellState, newState: ShellState, action: ShellAction }> =
+      new EventEmitter<{ priorState: ShellState, newState: ShellState, action: ShellAction }>().event;
 }

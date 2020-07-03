@@ -11,13 +11,13 @@ import { EscapeSequenceParser } from 'common/parser/EscapeSequenceParser';
 import { Disposable } from 'common/Lifecycle';
 import { concat } from 'common/TypedArrayUtils';
 import { StringToUtf32, stringFromCodePoint, utf32ToString, Utf8ToUtf32 } from 'common/input/TextDecoder';
-import { DEFAULT_ATTR_DATA } from 'common/buffer/BufferLine';
+import { DEFAULT_ATTR_DATA, IOMode } from 'common/buffer/BufferLine';
 import { EventEmitter, IEvent } from 'common/EventEmitter';
 import { IParsingState, IDcsHandler, IEscapeSequenceParser, IParams, IFunctionIdentifier } from 'common/parser/Types';
 import { NULL_CELL_CODE, NULL_CELL_WIDTH, Attributes, FgFlags, BgFlags, Content, UnderlineStyle } from 'common/buffer/Constants';
 import { CellData } from 'common/buffer/CellData';
 import { AttributeData } from 'common/buffer/AttributeData';
-import { ICoreService, IBufferService, IOptionsService, ILogService, IDirtyRowService, ICoreMouseService, ICharsetService, IUnicodeService } from 'common/services/Services';
+import { ICoreService, IBufferService, IOptionsService, ILogService, IDirtyRowService, ICoreMouseService, ICharsetService, IUnicodeService, IShellService, ShellState } from 'common/services/Services';
 import { OscHandler } from 'common/parser/OscParser';
 import { DcsHandler } from 'common/parser/DcsParser';
 
@@ -179,6 +179,52 @@ class DECRQSS implements IDcsHandler {
   }
 }
 
+class DPROTO implements IDcsHandler {
+  private _data: Uint32Array = new Uint32Array(0);
+
+  constructor(private _shellService: IShellService) {}
+
+  public hook(params: IParams): void {
+    this._data = new Uint32Array(0);
+  }
+
+  public put(data: Uint32Array, start: number, end: number): void {
+    this._data = concat(this._data, data.subarray(start, end));
+  }
+
+  public unhook(success: boolean): void {
+    if (!success) {
+      this._data = new Uint32Array(0);
+      return;
+    }
+    // Shift down by 0xA0 (160) to decode the message
+    const shiftedData = this._data.map((point) => (point -= 160));
+    const dataStr = utf32ToString(shiftedData);
+    console.log("DCS decoded ", dataStr);
+    const data = JSON.parse(dataStr);
+    switch (data["hook"]) {
+      case "precmd":
+        this._shellService.precmd(data["value"]["prompt"]);
+        break;
+      case "preexec":
+        this._shellService.preexec();
+        break;
+      case "chpwd":
+        this._shellService.chpwd(data["value"]["oldpwd"], data["value"]["pwd"]);
+        break;
+      default:
+        throw Error("Unknown hook");
+    }
+    // let arr = [];
+    // for (let i = 0; i < data.length; i++) {
+    //   arr.push(data.charCodeAt(i).toString(16));
+    // }
+    // console.log(arr.join(","))
+    this._data = new Uint32Array(0);
+  }
+}
+
+
 /**
  * DCS Ps; Ps| Pt ST
  *   DECUDK (https://vt100.net/docs/vt510-rm/DECUDK.html)
@@ -203,8 +249,6 @@ class DECRQSS implements IDcsHandler {
  * @vt: #N  DCS   XTSETTCAP   "Set Terminfo Data"  "DCS + p Pt ST"   "Set Terminfo Data."
  */
 
-
-
 /**
  * The terminal's standard implementation of IInputHandler, this handles all
  * input from the Parser.
@@ -221,6 +265,8 @@ export class InputHandler extends Disposable implements IInputHandler {
   private _iconName = '';
   protected _windowTitleStack: string[] = [];
   protected _iconNameStack: string[] = [];
+
+  private _ioMode : IOMode;
 
   private _curAttrData: IAttributeData = DEFAULT_ATTR_DATA.clone();
   private _eraseAttrDataInternal: IAttributeData = DEFAULT_ATTR_DATA.clone();
@@ -260,10 +306,13 @@ export class InputHandler extends Disposable implements IInputHandler {
     private readonly _optionsService: IOptionsService,
     private readonly _coreMouseService: ICoreMouseService,
     private readonly _unicodeService: IUnicodeService,
+    private readonly _shellService: IShellService,
     private readonly _parser: IEscapeSequenceParser = new EscapeSequenceParser()
   ) {
     super();
     this.register(this._parser);
+
+    this._ioMode = IOMode.UNSET;
 
     /**
      * custom fallback handlers
@@ -281,6 +330,7 @@ export class InputHandler extends Disposable implements IInputHandler {
       this._logService.debug('Unknown OSC code: ', { identifier, action, data });
     });
     this._parser.setDcsHandlerFallback((ident, action, payload) => {
+      console.log("Executing dcs fallback handler");
       if (action === 'HOOK') {
         payload = payload.toArray();
       }
@@ -445,6 +495,10 @@ export class InputHandler extends Disposable implements IInputHandler {
      * DCS handler
      */
     this._parser.setDcsHandler({intermediates: '$', final: 'q'}, new DECRQSS(this._bufferService, this._coreService, this._logService, this._optionsService));
+
+    // Denver protocol handler
+    console.log("Registering DPROTO handler");
+    this._parser.setDcsHandler({intermediates: '$', final: 'd'}, new DPROTO(this._shellService));
   }
 
   public dispose(): void {
@@ -504,6 +558,17 @@ export class InputHandler extends Disposable implements IInputHandler {
     const insertMode = this._coreService.modes.insertMode;
     const curAttr = this._curAttrData;
     let bufferRow = buffer.lines.get(buffer.ybase + buffer.y)!;
+
+    switch (this._shellService.state) {
+      case ShellState.AWAITING_INPUT:
+        bufferRow.setIOMode(IOMode.INPUT);
+        break;
+      case ShellState.EXECUTING_COMMAND:
+        bufferRow.setIOMode(IOMode.OUTPUT);
+        break;
+      default:
+        bufferRow.setIOMode(IOMode.UNSET);
+    }
 
     this._dirtyRowService.markDirty(buffer.y);
 

@@ -54,6 +54,9 @@ export class DomRenderer extends Disposable implements IRenderer {
     @IBufferService private readonly _bufferService: IBufferService
   ) {
     super();
+
+    console.log("Dom renderer")
+
     this._rowContainer = document.createElement('div');
     this._rowContainer.classList.add(ROW_CONTAINER_CLASS);
     this._rowContainer.style.lineHeight = 'normal';

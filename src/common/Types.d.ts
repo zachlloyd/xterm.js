@@ -8,6 +8,7 @@ import { IEvent, IEventEmitter } from 'common/EventEmitter';
 import { IDeleteEvent, IInsertEvent } from 'common/CircularList';
 import { IParams } from 'common/parser/Types';
 import { IOptionsService, IUnicodeService } from 'common/services/Services';
+import { IOMode } from 'common/buffer/BufferLine';
 
 export interface ICoreTerminal {
   optionsService: IOptionsService;
@@ -167,6 +168,9 @@ export interface IBufferLine {
   clone(): IBufferLine;
   getTrimmedLength(): number;
   translateToString(trimRight?: boolean, startCol?: number, endCol?: number): string;
+
+  getIOMode() : IOMode;
+  setIOMode(ioMode: IOMode) : void;
 
   /* direct access to cell attrs */
   getWidth(index: number): number;

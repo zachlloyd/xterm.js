@@ -37,6 +37,8 @@ const enum Cell {
 
 export const DEFAULT_ATTR_DATA = Object.freeze(new AttributeData());
 
+export enum IOMode {UNSET, INPUT, OUTPUT}
+
 /**
  * Typed array based bufferline implementation.
  *
@@ -57,6 +59,7 @@ export class BufferLine implements IBufferLine {
   protected _combined: {[index: number]: string} = {};
   protected _extendedAttrs: {[index: number]: ExtendedAttrs} = {};
   public length: number;
+  private _ioMode: IOMode;
 
   constructor(cols: number, fillCellData?: ICellData, public isWrapped: boolean = false) {
     this._data = new Uint32Array(cols * CELL_SIZE);
@@ -65,6 +68,15 @@ export class BufferLine implements IBufferLine {
       this.setCell(i, cell);
     }
     this.length = cols;
+    this._ioMode = IOMode.UNSET;
+  }
+
+  public getIOMode() : IOMode {
+    return this._ioMode;
+  }
+
+  public setIOMode(ioMode: IOMode) {
+    this._ioMode = ioMode;
   }
 
   /**

@@ -48,6 +48,8 @@ export class WebglRenderer extends Disposable implements IRenderer {
   ) {
     super();
 
+    console.log('webgl renderer')
+
     this._core = (this._terminal as any)._core;
 
     this._renderLayers = [

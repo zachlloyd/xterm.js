@@ -42,6 +42,7 @@ export class Renderer extends Disposable implements IRenderer {
     @ICoreBrowserService coreBrowserService: ICoreBrowserService
   ) {
     super();
+    console.log('canvas renderer')
     const allowTransparency = this._optionsService.options.allowTransparency;
     this._characterJoinerRegistry = new CharacterJoinerRegistry(this._bufferService);
     this._renderLayers = [

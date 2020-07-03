@@ -22,7 +22,7 @@
  */
 
 import { Disposable } from 'common/Lifecycle';
-import { IInstantiationService, IOptionsService, IBufferService, ILogService, ICharsetService, ICoreService, ICoreMouseService, IUnicodeService, IDirtyRowService } from 'common/services/Services';
+import { IInstantiationService, IOptionsService, IBufferService, ILogService, ICharsetService, ICoreService, ICoreMouseService, IUnicodeService, IDirtyRowService, IShellService } from 'common/services/Services';
 import { InstantiationService } from 'common/services/InstantiationService';
 import { LogService } from 'common/services/LogService';
 import { BufferService, MINIMUM_COLS, MINIMUM_ROWS } from 'common/services/BufferService';
@@ -39,6 +39,7 @@ import { IFunctionIdentifier, IParams } from 'common/parser/Types';
 import { IBufferSet } from 'common/buffer/Types';
 import { InputHandler } from 'common/InputHandler';
 import { WriteBuffer } from 'common/input/WriteBuffer';
+import { ShellService } from 'common/services/ShellService';
 
 export abstract class CoreTerminal extends Disposable implements ICoreTerminal {
   protected readonly _instantiationService: IInstantiationService;
@@ -49,6 +50,7 @@ export abstract class CoreTerminal extends Disposable implements ICoreTerminal {
   protected readonly _coreMouseService: ICoreMouseService;
   protected readonly _dirtyRowService: IDirtyRowService;
 
+  protected readonly shellService: IShellService;
   public readonly unicodeService: IUnicodeService;
   public readonly optionsService: IOptionsService;
 
@@ -96,9 +98,11 @@ export abstract class CoreTerminal extends Disposable implements ICoreTerminal {
     this._instantiationService.setService(IUnicodeService, this.unicodeService);
     this._charsetService = this._instantiationService.createInstance(CharsetService);
     this._instantiationService.setService(ICharsetService, this._charsetService);
+    this.shellService = this._instantiationService.createInstance(ShellService);
+    this._instantiationService.setService(IShellService, this.shellService);
 
     // Register input handler and handle/forward events
-    this._inputHandler = new InputHandler(this._bufferService, this._charsetService, this._coreService, this._dirtyRowService, this._logService, this.optionsService, this._coreMouseService, this.unicodeService);
+    this._inputHandler = new InputHandler(this._bufferService, this._charsetService, this._coreService, this._dirtyRowService, this._logService, this.optionsService, this._coreMouseService, this.unicodeService, this.shellService);
     this.register(forwardEvent(this._inputHandler.onLineFeed, this._onLineFeed));
     this.register(this._inputHandler);
 
@@ -120,6 +124,8 @@ export abstract class CoreTerminal extends Disposable implements ICoreTerminal {
     this._windowsMode?.dispose();
     this._windowsMode = undefined;
   }
+
+
 
   public write(data: string | Uint8Array, callback?: () => void): void {
     this._writeBuffer.write(data, callback);

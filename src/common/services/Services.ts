@@ -167,6 +167,33 @@ export interface ILogService {
   error(message: any, ...optionalParams: any[]): void;
 }
 
+export const enum ShellState {
+  UNKNOWN = 1,
+  AWAITING_INPUT = 2,
+  EXECUTING_COMMAND = 3,
+}
+
+export const enum ShellAction {
+ PRECMD_HOOK = 1,
+ PREEXEC_HOOK = 2,
+ CHPWD_HOOK = 3,
+}
+
+export const IShellService = createDecorator<IShellService>('ShellService');
+export interface IShellService {
+  serviceBrand: undefined;
+
+  readonly state : ShellState;
+  readonly prompt : string | undefined;
+  readonly pwd : string | undefined;
+
+  precmd(prompt: string): void;
+  preexec(): void;
+  chpwd(oldpwd: string, pwd: string): void;
+
+  onStateChange: IEvent<{ priorState: ShellState, newState: ShellState, action: ShellAction }>;
+}
+
 export const IOptionsService = createDecorator<IOptionsService>('OptionsService');
 export interface IOptionsService {
   serviceBrand: undefined;

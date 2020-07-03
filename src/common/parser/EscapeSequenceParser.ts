@@ -361,7 +361,12 @@ export class EscapeSequenceParser extends Disposable implements IEscapeSequenceP
     };
   }
   public setEscHandler(id: IFunctionIdentifier, handler: EscHandlerType): void {
-    this._escHandlers[this._identifier(id, [0x30, 0x7e])] = [handler];
+    console.log('Setting esc handler', handler, id);
+    let wrappedHandler = () => {
+      // console.log('Executing ESC handler', handler, 'for identifier', id);
+      return handler();
+    }
+    this._escHandlers[this._identifier(id, [0x30, 0x7e])] = [wrappedHandler];
   }
   public clearEscHandler(id: IFunctionIdentifier): void {
     if (this._escHandlers[this._identifier(id, [0x30, 0x7e])]) delete this._escHandlers[this._identifier(id, [0x30, 0x7e])];
@@ -396,14 +401,40 @@ export class EscapeSequenceParser extends Disposable implements IEscapeSequenceP
       }
     };
   }
+
   public setCsiHandler(id: IFunctionIdentifier, handler: CsiHandlerType): void {
-    this._csiHandlers[this._identifier(id)] = [handler];
+    let handlerStr = handler.toString();
+    let wrapHandler = (params: IParams) => {
+      // console.log('Executing CSI handler', handlerStr, 'for identifier', id);
+      return handler(params);
+    }
+    this._csiHandlers[this._identifier(id)] = [wrapHandler];
   }
   public clearCsiHandler(id: IFunctionIdentifier): void {
     if (this._csiHandlers[this._identifier(id)]) delete this._csiHandlers[this._identifier(id)];
   }
   public setCsiHandlerFallback(callback: (ident: number, params: IParams) => void): void {
     this._csiHandlerFb = callback;
+  }
+
+  private loggingDcsHandler(id: IFunctionIdentifier, handler: IDcsHandler): IDcsHandler {
+    let handlerStr = handler.toString();
+    return {
+      hook: (params: IParams) => {
+        console.log(`DCS Handler ${handlerStr + id} hook `, params);
+        handler.hook(params);
+      },
+
+      put: (data: Uint32Array, start: number, end: number) => {
+        console.log(`DCS Handler ${handlerStr + id} put data.  start ${start} end ${end}`);
+        handler.put(data, start, end);
+      },
+
+      unhook: (success: boolean) => {
+        console.log(`DCS Handler ${handlerStr + id} unhook success ${success}`);
+        return handler.unhook(success);
+      }
+    }
   }
 
   public addDcsHandler(id: IFunctionIdentifier, handler: IDcsHandler): IDisposable {

@@ -12,6 +12,7 @@ import { NULL_CELL_CODE, Content } from 'common/buffer/Constants';
 import { JoinedCellData } from 'browser/renderer/CharacterJoinerRegistry';
 import { IColorSet } from 'browser/Types';
 import { CellData } from 'common/buffer/CellData';
+import { IOMode } from 'common/buffer/BufferLine';
 import { IOptionsService, IBufferService } from 'common/services/Services';
 
 /**
@@ -71,7 +72,8 @@ export class TextRenderLayer extends BaseRenderLayer {
     callback: (
       cell: ICellData,
       x: number,
-      y: number
+      y: number,
+      ioMode: IOMode | undefined
     ) => void
   ): void {
     for (let y = firstRow; y <= lastRow; y++) {
@@ -139,7 +141,8 @@ export class TextRenderLayer extends BaseRenderLayer {
         callback(
           cell,
           x,
-          y
+          y,
+          line?.getIOMode()
         );
 
         x = lastCharX;
@@ -160,7 +163,8 @@ export class TextRenderLayer extends BaseRenderLayer {
 
     ctx.save();
 
-    this._forEachCell(firstRow, lastRow, null, (cell, x, y) => {
+    this._forEachCell(firstRow, lastRow, null, (cell, x, y, ioMode) => {
+      // console.log("Drawing cell at ", x, ", ", y, "in mode", ioMode)
       // libvte and xterm both draw the background (but not foreground) of invisible characters,
       // so we should too.
       let nextFillStyle = null; // null represents default background color
@@ -177,6 +181,10 @@ export class TextRenderLayer extends BaseRenderLayer {
         nextFillStyle = `rgb(${AttributeData.toColorRGB(cell.getBgColor()).join(',')})`;
       } else if (cell.isBgPalette()) {
         nextFillStyle = this._colors.ansi[cell.getBgColor()].css;
+      }
+
+      if (ioMode == IOMode.INPUT) {
+        nextFillStyle = "rgb(70,130,180)"
       }
 
       if (prevFillStyle === null) {
