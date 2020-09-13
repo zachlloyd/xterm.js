@@ -332,6 +332,8 @@ export class GlyphRenderer {
       return;
     }
 
+    //console.log("Webgl render()");
+
     const gl = this._gl;
 
     gl.useProgram(this._program);

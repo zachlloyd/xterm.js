@@ -659,6 +659,12 @@ declare module 'xterm' {
      * Adds an event listener for when a line feed is added.
      * @returns an `IDisposable` to stop listening.
      */
+    onSuggestion: IEvent<{ suggestions: string[] }>;
+
+    /**
+     * Adds an event listener for when a line feed is added.
+     * @returns an `IDisposable` to stop listening.
+     */
     onLineFeed: IEvent<void>;
 
     /**

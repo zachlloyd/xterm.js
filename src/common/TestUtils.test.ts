@@ -139,6 +139,7 @@ export class MockShellService implements IShellService {
   public state = ShellState.UNKNOWN;
   public prompt : string | undefined;
   public pwd : string | undefined;
+  public shellSuggestions = [];
 
   precmd(prompt: string): void {
 
@@ -149,7 +150,19 @@ export class MockShellService implements IShellService {
   }
 
   chpwd(oldpwd: string, pwd: string): void {
+  }
 
+  startSuggestion() : void {
+  }
+
+  recordSuggestionChunk(suggestionChunk : string) : void {
+  }
+
+  endSuggestion() : void {
+  }
+
+  getSuggestions(): string[] {
+    return [""];
   }
 
   onStateChange: IEvent<{ priorState: ShellState, newState: ShellState, action: ShellAction }> =

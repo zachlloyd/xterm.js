@@ -14,7 +14,10 @@ declare const setTimeout: (handler: () => void, timeout?: number) => void;
  * it is set to a very high number. Typically xterm.js gets unresponsive with
  * a 100 times lower number (>500 kB).
  */
-const DISCARD_WATERMARK = 50000000; // ~50 MB
+// const DISCARD_WATERMARK = 50000000; // ~50 MB
+
+// Zach upped this for testing perf
+const DISCARD_WATERMARK = 500000000; // ~500 MB
 
 /**
  * The max number of ms to spend on writes before allowing the renderer to

@@ -14,6 +14,9 @@ import { IEvent, EventEmitter } from 'common/EventEmitter';
 import { AddonManager } from './AddonManager';
 import { IParams } from 'common/parser/Types';
 
+// Added by zach.
+import { WebglAddon } from 'xterm-addon-webgl';
+
 export class Terminal implements ITerminalApi {
   private _core: ITerminal;
   private _addonManager: AddonManager;
@@ -38,6 +41,7 @@ export class Terminal implements ITerminalApi {
   public get onTitleChange(): IEvent<string> { return this._core.onTitleChange; }
   public get onScroll(): IEvent<number> { return this._core.onScroll; }
   public get onKey(): IEvent<{ key: string, domEvent: KeyboardEvent }> { return this._core.onKey; }
+  public get onSuggestion(): IEvent<{ suggestions: string[] }> { return this._core.onSuggestion; }
   public get onRender(): IEvent<{ start: number, end: number }> { return this._core.onRender; }
   public get onResize(): IEvent<{ cols: number, rows: number }> { return this._core.onResize; }
 
@@ -76,6 +80,9 @@ export class Terminal implements ITerminalApi {
   }
   public open(parent: HTMLElement): void {
     this._core.open(parent);
+
+    // Uncomment to enable webgl
+    this.loadAddon(new WebglAddon());
   }
   public attachCustomKeyEventHandler(customKeyEventHandler: (event: KeyboardEvent) => boolean): void {
     this._core.attachCustomKeyEventHandler(customKeyEventHandler);

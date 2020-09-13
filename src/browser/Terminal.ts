@@ -52,7 +52,8 @@ import { MouseService } from 'browser/services/MouseService';
 import { Linkifier2 } from 'browser/Linkifier2';
 import { CoreBrowserService } from 'browser/services/CoreBrowserService';
 import { CoreTerminal } from 'common/CoreTerminal';
-import { ITerminalOptions as IInitializedTerminalOptions } from 'common/services/Services';
+import { ITerminalOptions as IInitializedTerminalOptions, ShellState, ShellAction } from 'common/services/Services';
+
 
 // Let it work inside Node.js for automated testing purposes.
 const document: Document = (typeof window !== 'undefined') ? window.document : null as any;
@@ -119,6 +120,9 @@ export class Terminal extends CoreTerminal implements ITerminal {
   public get onA11yChar(): IEvent<string> { return this._onA11yCharEmitter.event; }
   private _onA11yTabEmitter = new EventEmitter<number>();
   public get onA11yTab(): IEvent<number> { return this._onA11yTabEmitter.event; }
+
+  private _onSuggestion = new EventEmitter<{ suggestions: string[] }>();
+  public get onSuggestion(): IEvent<{ suggestions: string[] }> { return this._onSuggestion.event; }
 
   /**
    * Creates a new `Terminal` object.
@@ -427,6 +431,8 @@ export class Terminal extends CoreTerminal implements ITerminal {
     this._mouseService = this._instantiationService.createInstance(MouseService);
     this._instantiationService.setService(IMouseService, this._mouseService);
 
+    this.shellService.onStateChange(e => this.handleShellStateChange(e))
+
     this.viewport = this._instantiationService.createInstance(Viewport,
       (amount: number, suppressEvent: boolean) => this.scrollLines(amount, suppressEvent),
       this._viewportElement,
@@ -498,6 +504,18 @@ export class Terminal extends CoreTerminal implements ITerminal {
     // Listen for mouse events and translate
     // them into terminal mouse protocols.
     this.bindMouse();
+
+  }
+
+  private handleShellStateChange(e: {
+    priorState: ShellState;
+    newState: ShellState;
+    action: ShellAction;}) : void {
+    if (e.action === ShellAction.END_SUGGESTION) {
+      this._onSuggestion.fire({
+        suggestions : this.shellService.getSuggestions()
+      })
+    }
   }
 
   private _createRenderer(): IRenderer {

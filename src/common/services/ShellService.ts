@@ -13,6 +13,9 @@ export class ShellService extends Disposable implements IShellService {
   public state : ShellState;
   public prompt : string | undefined;
   public pwd : string | undefined;
+  public shellSuggestions : string[];
+
+  private suggestionBuffer : string;
 
   private _onStateChange = new EventEmitter<{
     priorState: ShellState;
@@ -31,6 +34,8 @@ export class ShellService extends Disposable implements IShellService {
   constructor(@IOptionsService private _optionsService: IOptionsService) {
     super();
     this.state = ShellState.UNKNOWN;
+    this.shellSuggestions = [];
+    this.suggestionBuffer = "";
   }
 
   public dispose(): void {
@@ -40,7 +45,8 @@ export class ShellService extends Disposable implements IShellService {
   precmd(prompt: string): void {
     const priorState = this.state;
     this.prompt = prompt;
-    this.state = ShellState.AWAITING_INPUT;
+    console.log("Storing prompt", prompt);
+    this.state = ShellState.HANDLING_INPUT;
     this._onStateChange.fire({
       priorState,
       newState: this.state,
@@ -60,5 +66,53 @@ export class ShellService extends Disposable implements IShellService {
 
   chpwd(oldpwd: string, pwd: string): void {
     this.pwd = pwd;
+    this._onStateChange.fire({
+      priorState: this.state,
+      newState: this.state,
+      action: ShellAction.CHPWD_HOOK
+    });
   }
+
+  startSuggestion() : void {
+    console.log("Starting suggestion recording")
+    const priorState = this.state;
+    this.state = ShellState.ACCEPTING_SUGGESTION;
+    this._onStateChange.fire({
+      priorState: priorState,
+      newState: this.state,
+      action: ShellAction.START_SUGGESTION
+    });
+  }
+
+  recordSuggestionChunk(suggestionChunk : string) : void {
+    this.suggestionBuffer += suggestionChunk;
+
+    // We take the reprinting of the prompt as the signal that the suggestion is done
+    // Requries setopt NOALWAYS_LAST_PROMPT in zsh
+    console.log("Prompt", this.prompt);
+    console.log("Suggestion buffer", this.suggestionBuffer);
+    const promptIdx = this.prompt ? this.suggestionBuffer.lastIndexOf(this.prompt) : -1;
+    if (promptIdx >= 0) {
+      this.suggestionBuffer = this.suggestionBuffer.slice(0, promptIdx);
+      this.endSuggestion();
+    }
+  }
+
+  endSuggestion() : void {
+    console.log("Ending suggestion", this.suggestionBuffer);
+    const priorState = this.state;
+    this.state = ShellState.HANDLING_INPUT;
+    this._onStateChange.fire({
+      priorState: priorState,
+      newState: this.state,
+      action: ShellAction.END_SUGGESTION
+    });
+  }
+
+  getSuggestions(): string[] {
+    const suggestions = this.suggestionBuffer.split("\n");
+    console.log(suggestions.length, "suggestions returned");
+    return suggestions;
+  }
+
 }

@@ -169,14 +169,17 @@ export interface ILogService {
 
 export const enum ShellState {
   UNKNOWN = 1,
-  AWAITING_INPUT = 2,
-  EXECUTING_COMMAND = 3,
+  HANDLING_INPUT = 2,
+  ACCEPTING_SUGGESTION = 3,
+  EXECUTING_COMMAND = 4,
 }
 
 export const enum ShellAction {
  PRECMD_HOOK = 1,
  PREEXEC_HOOK = 2,
  CHPWD_HOOK = 3,
+ START_SUGGESTION = 4,
+ END_SUGGESTION = 5,
 }
 
 export const IShellService = createDecorator<IShellService>('ShellService');
@@ -186,10 +189,16 @@ export interface IShellService {
   readonly state : ShellState;
   readonly prompt : string | undefined;
   readonly pwd : string | undefined;
+  readonly shellSuggestions : string[];
 
   precmd(prompt: string): void;
   preexec(): void;
   chpwd(oldpwd: string, pwd: string): void;
+
+  startSuggestion() : void;
+  recordSuggestionChunk(suggestionChunk : string) : void;
+  endSuggestion() : void;
+  getSuggestions(): string[];
 
   onStateChange: IEvent<{ priorState: ShellState, newState: ShellState, action: ShellAction }>;
 }

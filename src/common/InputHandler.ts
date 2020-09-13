@@ -199,6 +199,7 @@ class DPROTO implements IDcsHandler {
     }
     // Shift down by 0xA0 (160) to decode the message
     const shiftedData = this._data.map((point) => (point -= 160));
+    console.log(shiftedData);
     const dataStr = utf32ToString(shiftedData);
     console.log("DCS decoded ", dataStr);
     const data = JSON.parse(dataStr);
@@ -211,6 +212,12 @@ class DPROTO implements IDcsHandler {
         break;
       case "chpwd":
         this._shellService.chpwd(data["value"]["oldpwd"], data["value"]["pwd"]);
+        break;
+      case "precomplete":
+        this._shellService.startSuggestion();
+        break;
+      case "postcomplete":
+        this._shellService.endSuggestion();
         break;
       default:
         throw Error("Unknown hook");
@@ -506,6 +513,11 @@ export class InputHandler extends Disposable implements IInputHandler {
   }
 
   public parse(data: string | Uint8Array): void {
+    if (this._shellService.state === ShellState.ACCEPTING_SUGGESTION && typeof data === 'string') {
+      this._shellService.recordSuggestionChunk(data);
+      return;
+    }
+
     let buffer = this._bufferService.buffer;
     const cursorStartX = buffer.x;
     const cursorStartY = buffer.y;
@@ -560,7 +572,7 @@ export class InputHandler extends Disposable implements IInputHandler {
     let bufferRow = buffer.lines.get(buffer.ybase + buffer.y)!;
 
     switch (this._shellService.state) {
-      case ShellState.AWAITING_INPUT:
+      case ShellState.HANDLING_INPUT:
         bufferRow.setIOMode(IOMode.INPUT);
         break;
       case ShellState.EXECUTING_COMMAND:
@@ -1936,6 +1948,7 @@ export class InputHandler extends Disposable implements IInputHandler {
           // FALL-THROUGH
         case 47: // alt screen buffer
         case 1047: // alt screen buffer
+          console.log('Activating alternate screen buffer')
           this._bufferService.buffers.activateAltBuffer(this._eraseAttrData());
           this._coreService.isCursorInitialized = true;
           this._onRequestRefreshRows.fire(0, this._bufferService.rows - 1);

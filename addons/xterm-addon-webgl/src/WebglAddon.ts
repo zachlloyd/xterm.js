@@ -14,9 +14,12 @@ export class WebglAddon implements ITerminalAddon {
 
   constructor(
     private _preserveDrawingBuffer?: boolean
-  ) {}
+  ) {
+    console.log("Constructing webgl renderer");
+  }
 
   public activate(terminal: Terminal): void {
+    console.log("Activating webgl renderer");
     if (!terminal.element) {
       throw new Error('Cannot activate WebglAddon before Terminal.open');
     }
