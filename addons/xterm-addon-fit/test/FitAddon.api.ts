@@ -5,7 +5,7 @@
 
 import { assert } from 'chai';
 import { openTerminal, getBrowserType } from '../../../out-test/api/TestUtils';
-import { Browser, Page } from 'playwright-core';
+import { Browser, Page } from 'playwright';
 
 const APP = 'http://127.0.0.1:3000/test';
 
@@ -17,17 +17,25 @@ const height = 768;
 describe('FitAddon', () => {
   before(async function(): Promise<any> {
     const browserType = getBrowserType();
-    browser = await browserType.launch({ dumpio: true,
+    browser = await browserType.launch({
       headless: process.argv.indexOf('--headless') !== -1
     });
     page = await (await browser.newContext()).newPage();
     await page.setViewportSize({ width, height });
     await page.goto(APP);
+  });
+
+  beforeEach(async function(): Promise<any> {
+    await page.evaluate(`document.querySelector('#terminal-container').style.display=''`);
     await openTerminal(page);
   });
 
   after(async () => {
     await browser.close();
+  });
+
+  afterEach(async function(): Promise<any> {
+    await page.evaluate(`window.term.dispose()`);
   });
 
   it('no terminal', async function(): Promise<any> {
@@ -62,6 +70,15 @@ describe('FitAddon', () => {
         cols: 2,
         rows: 1
       });
+    });
+
+    it('hidden', async function(): Promise<any> {
+      await page.evaluate(`window.term.dispose()`);
+      await page.evaluate(`document.querySelector('#terminal-container').style.display='none'`);
+      await page.evaluate(`window.term = new Terminal()`);
+      await page.evaluate(`window.term.open(document.querySelector('#terminal-container'))`);
+      await loadFit();
+      assert.equal(await page.evaluate(`window.fit.proposeDimensions()`), undefined);
     });
   });
 

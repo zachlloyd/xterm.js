@@ -7,7 +7,7 @@ import { ITerminalOptions } from '../../../src/common/Types';
 import { ITheme } from 'xterm';
 import { assert } from 'chai';
 import { openTerminal, pollFor, writeSync, getBrowserType } from '../../../out-test/api/TestUtils';
-import { Browser, Page } from 'playwright-core';
+import { Browser, Page } from 'playwright';
 
 const APP = 'http://127.0.0.1:3000/test';
 
@@ -16,14 +16,12 @@ let page: Page;
 const width = 800;
 const height = 600;
 
-let itWebgl: (expectation: string, callback?: (this: Mocha.ITestCallbackContext, done: MochaDone) => any) => Mocha.ITest | void;
-
 describe('WebGL Renderer Integration Tests', async () => {
   const browserType = getBrowserType();
   const isHeadless = process.argv.indexOf('--headless') !== -1;
   // Firefox works only in non-headless mode https://github.com/microsoft/playwright/issues/1032
   const areTestsEnabled = browserType.name() === 'chromium' || (browserType.name() === 'firefox' && !isHeadless);
-  itWebgl = areTestsEnabled ? it : it.skip;
+  const itWebgl = areTestsEnabled ? it : it.skip;
 
   itWebgl('dispose removes renderer canvases', async function(): Promise<void> {
     await setupBrowser();
@@ -894,7 +892,7 @@ async function getCellColor(col: number, row: number): Promise<number[]> {
 
 async function setupBrowser(options: ITerminalOptions = { rendererType: 'dom' }): Promise<void> {
   const browserType = getBrowserType();
-  browser = await browserType.launch({ dumpio: true,
+  browser = await browserType.launch({
     headless: process.argv.indexOf('--headless') !== -1
   });
   page = await (await browser.newContext()).newPage();

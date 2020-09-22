@@ -285,6 +285,25 @@ export class Terminal extends CoreTerminal implements ITerminal {
     this._onBlur.fire();
   }
 
+  private _syncTextArea(): void {
+    if (!this.textarea || !this.buffer.isCursorInViewport || this._compositionHelper!.isComposing) {
+      return;
+    }
+
+    const cellHeight = Math.ceil(this._charSizeService!.height * this.optionsService.options.lineHeight);
+    const cursorTop = this._bufferService.buffer.y * cellHeight;
+    const cursorLeft = this._bufferService.buffer.x * this._charSizeService!.width;
+
+    // Sync the textarea to the exact position of the composition view so the IME knows where the
+    // text is.
+    this.textarea.style.left = cursorLeft + 'px';
+    this.textarea.style.top = cursorTop + 'px';
+    this.textarea.style.width = this._charSizeService!.width + 'px';
+    this.textarea.style.height = cellHeight + 'px';
+    this.textarea.style.lineHeight = cellHeight + 'px';
+    this.textarea.style.zIndex = '-5';
+  }
+
   /**
    * Initialize default behavior
    */
@@ -368,6 +387,7 @@ export class Terminal extends CoreTerminal implements ITerminal {
     this.element.classList.add('terminal');
     this.element.classList.add('xterm');
     this.element.setAttribute('tabindex', '0');
+    this.element.setAttribute('role', 'document');
     parent.appendChild(this.element);
 
     // Performance: Use a document fragment to build the terminal
@@ -442,7 +462,10 @@ export class Terminal extends CoreTerminal implements ITerminal {
     this.register(this._inputHandler.onRequestSyncScrollBar(() => this.viewport!.syncScrollArea()));
     this.register(this.viewport);
 
-    this.register(this.onCursorMove(() => this._renderService!.onCursorMove()));
+    this.register(this.onCursorMove(() => {
+      this._renderService!.onCursorMove();
+      this._syncTextArea();
+    }));
     this.register(this.onResize(() => this._renderService!.onResize(this.cols, this.rows)));
     this.register(this.onBlur(() => this._renderService!.onBlur()));
     this.register(this.onFocus(() => this._renderService!.onFocus()));
@@ -774,7 +797,7 @@ export class Terminal extends CoreTerminal implements ITerminal {
       if (!this.viewport!.onWheel(ev)) {
         return this.cancel(ev);
       }
-    }, { passive: true }));
+    }, { passive: false }));
 
     this.register(addDisposableDomListener(el, 'touchstart', (ev: TouchEvent) => {
       if (this._coreMouseService.areMouseEventsActive) return;
@@ -787,7 +810,7 @@ export class Terminal extends CoreTerminal implements ITerminal {
       if (!this.viewport!.onTouchMove(ev)) {
         return this.cancel(ev);
       }
-    }, { passive: true }));
+    }, { passive: false }));
   }
 
 
