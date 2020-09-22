@@ -5,7 +5,7 @@
 
 import { assert } from 'chai';
 import { pollFor, timeout, writeSync, openTerminal, getBrowserType } from './TestUtils';
-import { Browser, Page } from 'playwright-core';
+import { Browser, Page } from 'playwright';
 
 const APP = 'http://127.0.0.1:3000/test';
 
@@ -17,7 +17,7 @@ const height = 600;
 describe('API Integration Tests', function(): void {
   before(async () => {
     const browserType = getBrowserType();
-    browser = await browserType.launch({ dumpio: true,
+    browser = await browserType.launch({
       headless: process.argv.indexOf('--headless') !== -1
     });
     page = await (await browser.newContext()).newPage();
@@ -223,13 +223,17 @@ describe('API Integration Tests', function(): void {
 
   it('selection', async () => {
     await openTerminal(page, { rows: 5, cols: 5 });
-    await page.evaluate(`window.term.write('\\n\\nfoo\\n\\n\\rbar\\n\\n\\rbaz')`);
+    await writeSync(page, `\\n\\nfoo\\n\\n\\rbar\\n\\n\\rbaz`);
     assert.equal(await page.evaluate(`window.term.hasSelection()`), false);
     assert.equal(await page.evaluate(`window.term.getSelection()`), '');
     assert.deepEqual(await page.evaluate(`window.term.getSelectionPosition()`), undefined);
     await page.evaluate(`window.term.selectAll()`);
     assert.equal(await page.evaluate(`window.term.hasSelection()`), true);
-    assert.equal(await page.evaluate(`window.term.getSelection()`), '\n\nfoo\n\nbar\n\nbaz');
+    if (process.platform === 'win32') {
+      assert.equal(await page.evaluate(`window.term.getSelection()`), '\r\n\r\nfoo\r\n\r\nbar\r\n\r\nbaz');
+    } else {
+      assert.equal(await page.evaluate(`window.term.getSelection()`), '\n\nfoo\n\nbar\n\nbaz');
+    }
     assert.deepEqual(await page.evaluate(`window.term.getSelectionPosition()`), { startColumn: 0, startRow: 0, endColumn: 5, endRow: 6 });
     await page.evaluate(`window.term.clearSelection()`);
     assert.equal(await page.evaluate(`window.term.hasSelection()`), false);
@@ -753,6 +757,57 @@ describe('API Integration Tests', function(): void {
       await pollFor(page, `window.calls`, ['provide 1', 'hover 1-3', 'leave 1-3', 'hover 5-7', 'leave 5-7', 'provide 2']);
       await moveMouseCell(page, dims, 10, 1);
       await pollFor(page, `window.calls`, ['provide 1', 'hover 1-3', 'leave 1-3', 'hover 5-7', 'leave 5-7', 'provide 2', 'provide 1', 'hover 9-11']);
+      await page.evaluate(`window.disposable.dispose()`);
+    });
+
+    it('should dispose links when hovering away', async () => {
+      await openTerminal(page, { rendererType: 'dom' });
+      await writeSync(page, 'foo bar baz');
+      // Wait for renderer to catch up as links are cleared on render
+      await pollFor(page, `document.querySelector('.xterm-rows').textContent`, 'foo bar baz ');
+      await page.evaluate(`
+        window.calls = [];
+        window.disposable = window.term.registerLinkProvider({
+          provideLinks: (position, cb) => {
+            window.calls.push('provide ' + position);
+            if (position === 1) {
+              cb([{
+                range: { start: { x: 1, y: 1 }, end: { x: 3, y: 1 } },
+                text: '',
+                activate: () => window.calls.push('activate'),
+                dispose: () => window.calls.push('dispose 1-3'),
+                hover: () => window.calls.push('hover 1-3'),
+                leave: () => window.calls.push('leave 1-3')
+              }, {
+                range: { start: { x: 5, y: 1 }, end: { x: 7, y: 1 } },
+                text: '',
+                activate: () => window.calls.push('activate'),
+                dispose: () => window.calls.push('dispose 5-7'),
+                hover: () => window.calls.push('hover 5-7'),
+                leave: () => window.calls.push('leave 5-7')
+              }, {
+                range: { start: { x: 9, y: 1 }, end: { x: 11, y: 1 } },
+                text: '',
+                activate: () => window.calls.push('activate'),
+                dispose: () => window.calls.push('dispose 9-11'),
+                hover: () => window.calls.push('hover 9-11'),
+                leave: () => window.calls.push('leave 9-11')
+              }]);
+            }
+          }
+        });
+      `);
+      const dims = await getDimensions();
+      await moveMouseCell(page, dims, 2, 1);
+      await pollFor(page, `window.calls`, ['provide 1', 'hover 1-3']);
+      await moveMouseCell(page, dims, 6, 1);
+      await pollFor(page, `window.calls`, ['provide 1', 'hover 1-3', 'leave 1-3', 'hover 5-7']);
+      await moveMouseCell(page, dims, 6, 2);
+      await pollFor(page, `window.calls`, ['provide 1', 'hover 1-3', 'leave 1-3', 'hover 5-7', 'leave 5-7', 'dispose 1-3', 'dispose 5-7', 'dispose 9-11', 'provide 2']);
+      await moveMouseCell(page, dims, 10, 1);
+      await pollFor(page, `window.calls`, ['provide 1', 'hover 1-3', 'leave 1-3', 'hover 5-7', 'leave 5-7', 'dispose 1-3', 'dispose 5-7', 'dispose 9-11', 'provide 2', 'provide 1', 'hover 9-11']);
+      await moveMouseCell(page, dims, 10, 2);
+      await pollFor(page, `window.calls`, ['provide 1', 'hover 1-3', 'leave 1-3', 'hover 5-7', 'leave 5-7', 'dispose 1-3', 'dispose 5-7', 'dispose 9-11', 'provide 2', 'provide 1', 'hover 9-11', 'leave 9-11', 'dispose 1-3', 'dispose 5-7', 'dispose 9-11', 'provide 2']);
       await page.evaluate(`window.disposable.dispose()`);
     });
   });

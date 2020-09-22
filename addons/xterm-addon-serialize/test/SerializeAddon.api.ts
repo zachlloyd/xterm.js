@@ -5,7 +5,7 @@
 
 import { assert } from 'chai';
 import { openTerminal, writeSync, getBrowserType } from '../../../out-test/api/TestUtils';
-import { Browser, Page } from 'playwright-core';
+import { Browser, Page } from 'playwright';
 
 const APP = 'http://127.0.0.1:3000/test';
 
@@ -17,7 +17,7 @@ const height = 600;
 describe('SerializeAddon', () => {
   before(async function(): Promise<any> {
     const browserType = getBrowserType();
-    browser = await browserType.launch({ dumpio: true,
+    browser = await browserType.launch({
       headless: process.argv.indexOf('--headless') !== -1
     });
     page = await (await browser.newContext()).newPage();
@@ -266,6 +266,35 @@ describe('SerializeAddon', () => {
       'a\x1b[7Cb',
       'aa\x1b[6Cc',
       'aaa\x1b[5Cd'
+    ];
+    await writeSync(page, lines.join('\\r\\n'));
+    assert.equal(await page.evaluate(`serializeAddon.serialize();`), expected.join('\r\n'));
+  });
+
+  it('serialize CJK correctly', async () => {
+    const lines = [
+      '中文中文',
+      '12中文',
+      '中文12',
+      '1中文中文中' // this line is going to be wrapped at last character because it has line length of 11 (1+2*5)
+    ];
+    const expected = [
+      '中文中文',
+      '12中文',
+      '中文12',
+      '1中文中文',
+      '中'
+    ];
+    await writeSync(page, lines.join('\\r\\n'));
+    assert.equal(await page.evaluate(`serializeAddon.serialize();`), expected.join('\r\n'));
+  });
+
+  it('serialize CJK Mixed with tab correctly', async () => {
+    const lines = [
+      '中文\t12' // CJK mixed with tab
+    ];
+    const expected = [
+      '中文\x1b[4C12'
     ];
     await writeSync(page, lines.join('\\r\\n'));
     assert.equal(await page.evaluate(`serializeAddon.serialize();`), expected.join('\r\n'));
