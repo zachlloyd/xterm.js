@@ -123,6 +123,7 @@ export class WebglRenderer extends Disposable implements IRenderer {
 
     // Force a full refresh
     this._model.clear();
+    this._model.clearSelection();
   }
 
   public onDevicePixelRatioChange(): void {
@@ -160,6 +161,7 @@ export class WebglRenderer extends Disposable implements IRenderer {
 
     // Force a full refresh
     this._model.clear();
+    this._model.clearSelection();
   }
 
   public onCharSizeChanged(): void {
@@ -216,6 +218,14 @@ export class WebglRenderer extends Disposable implements IRenderer {
     this._glyphRenderer.setAtlas(this._charAtlas);
   }
 
+  public clearCharAtlas(): void {
+    this._charAtlas?.clearTexture();
+    this._model.clear();
+    this._updateModel(0, this._terminal.rows - 1);
+    this._glyphRenderer.updateSelection(this._model);
+    this._onRequestRedraw.fire({ start: 0, end: this._terminal.rows - 1 });
+  }
+
   public clear(): void {
     this._renderLayers.forEach(l => l.reset(this._terminal));
   }
@@ -245,6 +255,7 @@ export class WebglRenderer extends Disposable implements IRenderer {
     // Tell renderer the frame is beginning
     if (this._glyphRenderer.beginFrame()) {
       this._model.clear();
+      this._model.clearSelection();
     }
 
     // Update model to reflect what's drawn

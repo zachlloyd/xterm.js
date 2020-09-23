@@ -88,6 +88,7 @@ export type CustomKeyEventHandler = (event: KeyboardEvent) => boolean;
 export type LineData = CharData[];
 
 export interface ICompositionHelper {
+  readonly isComposing: boolean;
   compositionstart(): void;
   compositionupdate(ev: CompositionEvent): void;
   compositionend(): void;
@@ -275,6 +276,7 @@ interface ILink {
   activate(event: MouseEvent, text: string): void;
   hover?(event: MouseEvent, text: string): void;
   leave?(event: MouseEvent, text: string): void;
+  dispose?(): void;
 }
 
 interface ILinkDecorations {
